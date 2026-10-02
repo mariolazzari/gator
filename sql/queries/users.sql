@@ -8,6 +8,11 @@ VALUES (
 )
 RETURNING *;
 
+-- name: GetUsers :many
+SELECT *
+FROM users
+order by name;
+
 -- name: GetUser :one
 SELECT * FROM users
 WHERE name = $1;

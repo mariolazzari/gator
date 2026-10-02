@@ -87,3 +87,22 @@ func resetHandler(s *state, cmd command) error {
 
 	return nil
 }
+
+func usersHandler(s *state, cmd command) error {
+
+	// reset users table
+	users, err := s.db.GetUsers(context.Background())
+	if err != nil {
+		return fmt.Errorf("couldn't load users: %w", err)
+	}
+
+	for _, user := range users {
+		label := user.Name
+		if label == s.cfg.CurrentUserName {
+			label = fmt.Sprintf("%s (current)", label)
+		}
+		fmt.Println(label)
+	}
+
+	return nil
+}
