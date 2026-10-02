@@ -68,3 +68,22 @@ func registerHandler(s *state, cmd command) error {
 
 	return nil
 }
+
+func resetHandler(s *state, cmd command) error {
+
+	// reset users table
+	err := s.db.DeleteUsers(context.Background())
+	if err != nil {
+		return fmt.Errorf("couldn't deelte users: %w", err)
+	}
+
+	// reset current user
+	err = s.cfg.SetUser("")
+	if err != nil {
+		return fmt.Errorf("couldn't reser current user: %w", err)
+	}
+
+	fmt.Printf("users table successfully truncated")
+
+	return nil
+}
