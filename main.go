@@ -1,29 +1,18 @@
 package main
 
 import (
-	"fmt"
+	"database/sql"
 	"log"
 	"os"
 
+	_ "github.com/lib/pq"
 	"github.com/mariolazzari/gator/internal/config"
+	"github.com/mariolazzari/gator/internal/database"
 )
 
 type state struct {
 	cfg *config.Config
-}
-
-func handlerLogin(s *state, cmd command) error {
-	if len(cmd.Args) != 1 {
-		return fmt.Errorf("usage: %s <name>", cmd.Name)
-	}
-
-	err := s.cfg.SetUser(cmd.Args[0])
-	if err != nil {
-		return fmt.Errorf("couldn't set current user: %w", err)
-	}
-	fmt.Printf("User '%s' switched successfully\n", cmd.Args[0])
-
-	return nil
+	db  *database.Queries
 }
 
 func main() {
@@ -32,20 +21,29 @@ func main() {
 		log.Fatalf("error reading config: %v", err)
 	}
 
-	programState := &state{
+	// Open db connection
+	db, err := sql.Open("postgres", cfg.DBURL)
+	if err != nil {
+		log.Fatalf("error DB connection: %v", err)
+	}
+	dbQueries := database.New(db)
+
+	appState := &state{
 		cfg: &cfg,
+		db:  dbQueries,
 	}
 
 	cmds := commands{
 		handlers: make(map[string]func(*state, command) error),
 	}
-	cmds.register("login", handlerLogin)
+	cmds.register("login", loginHandler)
+	cmds.register("register", registerHandler)
 
 	if len(os.Args) < 2 {
 		log.Fatal("Usage: cli <command> [args...]")
 	}
 
-	err = cmds.run(programState, command{Name: os.Args[1], Args: os.Args[2:]})
+	err = cmds.run(appState, command{Name: os.Args[1], Args: os.Args[2:]})
 	if err != nil {
 		log.Fatal(err)
 	}
