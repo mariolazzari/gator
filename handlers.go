@@ -90,7 +90,6 @@ func resetHandler(s *state, cmd command) error {
 
 func usersHandler(s *state, cmd command) error {
 
-	// reset users table
 	users, err := s.db.GetUsers(context.Background())
 	if err != nil {
 		return fmt.Errorf("couldn't load users: %w", err)
@@ -147,6 +146,21 @@ func addFeedHandler(s *state, cmd command) error {
 	})
 
 	fmt.Println(feed)
+
+	return nil
+}
+
+func feedsHandler(s *state, cmd command) error {
+
+	feeds, err := s.db.GetFeeds(context.Background())
+	if err != nil {
+		return fmt.Errorf("couldn't load feeds: %w", err)
+	}
+
+	for _, feed := range feeds {
+		label := fmt.Sprintf("%s %s %s", feed.Name, feed.Url, feed.User)
+		fmt.Println(label)
+	}
 
 	return nil
 }
