@@ -9,8 +9,8 @@ import (
 	"github.com/mariolazzari/gator/internal/database"
 )
 
-func checkArgs(cmd command) error {
-	if len(cmd.Args) != 1 {
+func checkArgs(cmd command, n int) error {
+	if len(cmd.Args) != n {
 		return fmt.Errorf("usage: %s <name>", cmd.Name)
 	}
 
@@ -19,7 +19,7 @@ func checkArgs(cmd command) error {
 
 func loginHandler(s *state, cmd command) error {
 	// check param
-	if err := checkArgs(cmd); err != nil {
+	if err := checkArgs(cmd, 1); err != nil {
 		return err
 	}
 	name := cmd.Args[0]
@@ -42,7 +42,7 @@ func loginHandler(s *state, cmd command) error {
 
 func registerHandler(s *state, cmd command) error {
 	// check params
-	if err := checkArgs(cmd); err != nil {
+	if err := checkArgs(cmd, 1); err != nil {
 		return err
 	}
 	name := cmd.Args[0]
@@ -103,6 +103,50 @@ func usersHandler(s *state, cmd command) error {
 		}
 		fmt.Println(label)
 	}
+
+	return nil
+}
+
+func aggHandler(s *state, cmd command) error {
+
+	feed, err := fetchFeed(context.Background(), "https://www.wagslane.dev/index.xml")
+	if err != nil {
+		return fmt.Errorf("couldn't load users: %w", err)
+	}
+
+	fmt.Println(*feed)
+
+	return nil
+}
+
+func addFeedHandler(s *state, cmd command) error {
+	// check params
+	if err := checkArgs(cmd, 2); err != nil {
+		return err
+	}
+	name := cmd.Args[0]
+	url := cmd.Args[1]
+	now := time.Now()
+
+	ctx := context.Background()
+
+	// get current user
+	user, err := s.db.GetUser(ctx, s.cfg.CurrentUserName)
+	if err != nil {
+		return fmt.Errorf("couldn't load current user: %w", err)
+	}
+
+	// save feed to database
+	feed, err := s.db.CreateFeed(ctx, database.CreateFeedParams{
+		ID:        uuid.New(),
+		UserID:    user.ID,
+		Name:      name,
+		Url:       url,
+		CreatedAt: now,
+		UpdatedAt: now,
+	})
+
+	fmt.Println(feed)
 
 	return nil
 }
