@@ -17,3 +17,7 @@ from feed_follows as ff
 inner join users as u on u.id = ff.user_id
 inner join feeds as f on f.id = ff.feed_id
 where u.name = $1;
+
+-- name: DeleteFeedFollow :exec
+delete from feed_follows
+where feed_id = $1 and user_id = $2;

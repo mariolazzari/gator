@@ -211,3 +211,34 @@ func followingHandler(s *state, cmd command) error {
 
 	return nil
 }
+
+func unfollowHandler(s *state, cmd command) error {
+	if err := checkArgs(cmd, 1); err != nil {
+		return err
+	}
+
+	url := cmd.Args[0]
+	ctx := context.Background()
+
+	user, err := s.db.GetUser(ctx, s.cfg.CurrentUserName)
+	if err != nil {
+		return fmt.Errorf("couldn't load current user: %w", err)
+	}
+
+	feed, err := s.db.GetFeedByUrl(ctx, url)
+	if err != nil {
+		return fmt.Errorf("couldn't load feed by url: %w", err)
+	}
+
+	err = s.db.DeleteFeedFollow(ctx, database.DeleteFeedFollowParams{
+		FeedID: feed.ID,
+		UserID: user.ID,
+	})
+	if err != nil {
+		return fmt.Errorf("couldn't delete feed follow: %w", err)
+	}
+
+	fmt.Printf("%s %s\n", feed.Name, user.Name)
+
+	return nil
+}
