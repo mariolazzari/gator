@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -247,6 +248,45 @@ func unfollowHandler(s *state, cmd command) error {
 	}
 
 	fmt.Printf("%s %s\n", feed.Name, user.Name)
+
+	return nil
+}
+
+func browseHandler(s *state, cmd command) error {
+	limit := 2
+
+	if len(cmd.Args) > 1 {
+		return fmt.Errorf("usage: browse [limit]")
+	}
+
+	if len(cmd.Args) == 1 {
+		parsedLimit, err := strconv.Atoi(cmd.Args[0])
+		if err != nil || parsedLimit < 1 {
+			return fmt.Errorf("limit must be a positive integer")
+		}
+
+		limit = parsedLimit
+	}
+
+	user, err := s.db.GetUser(context.Background(), s.cfg.CurrentUserName)
+	if err != nil {
+		return fmt.Errorf("couldn't load current user: %w", err)
+	}
+
+	posts, err := s.db.GetPostsForUser(context.Background(), database.GetPostsForUserParams{
+		UserID: user.ID,
+		Limit:  int32(limit),
+	})
+	if err != nil {
+		return fmt.Errorf("get posts: %w", err)
+	}
+
+	for _, post := range posts {
+		fmt.Printf("Title: %s\n", post.Title)
+		fmt.Printf("URL: %s\n", post.Url)
+		fmt.Printf("Published: %s\n", post.PublishedAt.Format(time.RFC1123))
+		fmt.Println()
+	}
 
 	return nil
 }

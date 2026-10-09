@@ -6,8 +6,11 @@ import (
 	"fmt"
 	"html"
 	"io"
+	"log"
 	"net/http"
 	"time"
+
+	"github.com/mariolazzari/gator/internal/database"
 )
 
 type RSSFeed struct {
@@ -61,23 +64,40 @@ func fetchFeed(ctx context.Context, feedURL string) (*RSSFeed, error) {
 }
 
 func scrapeFeeds(s *state) error {
-	feed, err := s.db.GetNextFeedToFetch(context.Background())
+	ctx := context.Background()
+
+	feed, err := s.db.GetNextFeedToFetch(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("get next feed: %w", err)
 	}
 
-	_, err = s.db.MarkFeedFetched(context.Background(), feed.ID)
+	rssFeed, err := fetchFeed(ctx, feed.Url)
 	if err != nil {
-		return err
-	}
-
-	rssFeed, err := fetchFeed(context.Background(), feed.Url)
-	if err != nil {
-		return err
+		return fmt.Errorf("fetch feed %q: %w", feed.Url, err)
 	}
 
 	for _, item := range rssFeed.Channel.Item {
-		fmt.Println(item.Title)
+		publishedAt, err := parsePublishedAt(item.PubDate)
+		if err != nil {
+			log.Printf("parse published date for %q: %v", item.Title, err)
+			continue
+		}
+
+		_, err = s.db.CreatePost(ctx, database.CreatePostParams{
+			Title:       item.Title,
+			Url:         item.Link,
+			Description: item.Description,
+			PublishedAt: publishedAt,
+			FeedID:      feed.ID,
+		})
+		if err != nil {
+			log.Printf("save post %q: %v", item.Title, err)
+		}
+	}
+
+	_, err = s.db.MarkFeedFetched(ctx, feed.ID)
+	if err != nil {
+		return fmt.Errorf("mark feed as fetched: %w", err)
 	}
 
 	return nil
