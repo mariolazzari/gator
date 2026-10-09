@@ -100,14 +100,22 @@ func usersHandler(s *state, cmd command) error {
 }
 
 func aggHandler(s *state, cmd command) error {
-	feed, err := fetchFeed(context.Background(), "https://www.wagslane.dev/index.xml")
-	if err != nil {
-		return fmt.Errorf("couldn't fetch feed: %w", err)
+	// check arg
+	if err := checkArgs(cmd, 1); err != nil {
+		return err
 	}
 
-	fmt.Println(*feed)
+	time_between_reqs, err := time.ParseDuration(cmd.Args[0])
+	if err != nil {
+		return err
+	}
+	fmt.Printf("Collecting feeds every %v\n", time_between_reqs)
 
-	return nil
+	ticker := time.NewTicker(time_between_reqs)
+	for ; ; <-ticker.C {
+		scrapeFeeds(s)
+	}
+
 }
 
 func addFeedHandler(s *state, cmd command) error {
